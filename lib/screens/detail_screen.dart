@@ -123,17 +123,34 @@ class _DetailScreenState extends State<DetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final dateStr = DateFormat('MMM d, yyyy • h:mm a').format(_item.dateAdded);
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF0D1F33), const Color(0xFF1565C0)]
+                  : [const Color(0xFF0D47A1), const Color(0xFF1E88E5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text(
           '${ScreenshotCategory.emoji(_item.category)} ${ScreenshotCategory.label(_item.category)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white),
             tooltip: 'Remove from Sweptie',
             onPressed: _delete,
           ),
@@ -144,24 +161,44 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Screenshot image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _item.localPath != null
-                  ? Image.file(
-                      File(_item.localPath!),
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => _imagePlaceholder(),
-                    )
-                  : _imagePlaceholder(),
+            // Screenshot image with shadow
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(40),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _item.localPath != null
+                    ? Image.file(
+                        File(_item.localPath!),
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                      )
+                    : _imagePlaceholder(),
+              ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Date
-            Text(dateStr,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+            // Date chip
+            Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 14, color: cs.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(
+                  dateStr,
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                ),
+              ],
+            ),
 
             const SizedBox(height: 16),
 
@@ -171,13 +208,19 @@ class _DetailScreenState extends State<DetailScreen> {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: _toggleKeep,
-                    icon: Icon(
-                        _item.isKept ? Icons.bookmark : Icons.bookmark_border),
+                    icon: Icon(_item.isKept
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded),
                     label: Text(_item.isKept ? 'Kept' : 'Keep'),
                     style: FilledButton.styleFrom(
                       backgroundColor: _item.isKept
                           ? Colors.amber.shade700
-                          : Theme.of(context).colorScheme.primary,
+                          : cs.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -185,11 +228,15 @@ class _DetailScreenState extends State<DetailScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _delete,
-                    icon: const Icon(Icons.delete_outline),
+                    icon: const Icon(Icons.delete_outline_rounded),
                     label: const Text('Delete'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: cs.error,
+                      side: BorderSide(color: cs.error),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -202,13 +249,18 @@ class _DetailScreenState extends State<DetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Extracted Text',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  'Extracted Text',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: cs.onSurface,
+                  ),
+                ),
                 if (_item.extractedText.isNotEmpty)
                   TextButton.icon(
                     onPressed: _copyText,
-                    icon: const Icon(Icons.copy, size: 16),
+                    icon: const Icon(Icons.copy_rounded, size: 15),
                     label: const Text('Copy'),
                   ),
               ],
@@ -216,11 +268,11 @@ class _DetailScreenState extends State<DetailScreen> {
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: Text(
                 _item.extractedText.isEmpty
@@ -229,12 +281,14 @@ class _DetailScreenState extends State<DetailScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   color: _item.extractedText.isEmpty
-                      ? Colors.grey
-                      : Colors.black87,
+                      ? cs.onSurfaceVariant
+                      : cs.onSurface,
                   fontFamily: 'monospace',
+                  height: 1.5,
                 ),
               ),
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -243,13 +297,16 @@ class _DetailScreenState extends State<DetailScreen> {
 
   Widget _imagePlaceholder() {
     return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
+      height: 220,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      child: const Center(
-        child: Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+      child: Center(
+        child: Icon(Icons.image_outlined, size: 52, color: Colors.blue.shade300),
       ),
     );
   }

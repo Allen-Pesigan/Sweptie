@@ -18,13 +18,14 @@ class ScreenshotCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         clipBehavior: Clip.antiAlias,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Stack(
           fit: StackFit.expand,
           children: [
             _buildImage(),
-            // Gradient overlay at the bottom for the category chip
+            // 3-stop gradient for better text legibility over any image
             Positioned(
               left: 0,
               right: 0,
@@ -34,17 +35,33 @@ class ScreenshotCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black54],
+                    colors: [
+                      Colors.transparent,
+                      Color(0x66000000),
+                      Color(0xCC000000),
+                    ],
+                    stops: [0.0, 0.45, 1.0],
                   ),
                 ),
-                padding: const EdgeInsets.fromLTRB(8, 16, 8, 6),
+                padding: const EdgeInsets.fromLTRB(8, 28, 8, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Flexible(child: _buildCategoryChip(context)),
+                    Flexible(child: _buildCategoryChip()),
                     if (item.isKept)
-                      const Icon(Icons.bookmark, color: Colors.amber, size: 18),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.amber,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.bookmark_rounded,
+                          color: Colors.white,
+                          size: 13,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -57,9 +74,8 @@ class ScreenshotCard extends StatelessWidget {
 
   Widget _buildImage() {
     if (item.localPath != null) {
-      final file = File(item.localPath!);
       return Image.file(
-        file,
+        File(item.localPath!),
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _placeholder(),
       );
@@ -69,28 +85,41 @@ class ScreenshotCard extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      color: Colors.grey.shade200,
-      child: const Center(
-        child: Icon(Icons.image_not_supported, color: Colors.grey, size: 36),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.image_outlined, color: Colors.blue.shade300, size: 40),
       ),
     );
   }
 
-  Widget _buildCategoryChip(BuildContext context) {
-    final label =
-        '${ScreenshotCategory.emoji(item.category)} ${ScreenshotCategory.label(item.category)}';
+  Widget _buildCategoryChip() {
+    final color = _categoryColor(item.category);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: _categoryColor(item.category).withOpacity(0.85),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withAlpha(230),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withAlpha(100),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
-        label,
+        '${ScreenshotCategory.emoji(item.category)} ${ScreenshotCategory.label(item.category)}',
         style: const TextStyle(
           color: Colors.white,
           fontSize: 11,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
         overflow: TextOverflow.ellipsis,
       ),
@@ -100,17 +129,17 @@ class ScreenshotCard extends StatelessWidget {
   Color _categoryColor(String category) {
     switch (category) {
       case ScreenshotCategory.receipt:
-        return Colors.green.shade700;
+        return const Color(0xFF2E7D32);
       case ScreenshotCategory.qrcode:
-        return Colors.deepPurple;
+        return const Color(0xFF6A1B9A);
       case ScreenshotCategory.code:
-        return Colors.indigo;
+        return const Color(0xFF1565C0);
       case ScreenshotCategory.contact:
-        return Colors.teal;
+        return const Color(0xFF00695C);
       case ScreenshotCategory.notes:
-        return Colors.blue.shade700;
+        return const Color(0xFF0277BD);
       default:
-        return Colors.grey.shade600;
+        return const Color(0xFF546E7A);
     }
   }
 }

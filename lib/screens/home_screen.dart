@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sweptie/main.dart' show themeModeNotifier;
 import 'package:sweptie/models/screenshot_item.dart';
 import 'package:sweptie/screens/detail_screen.dart';
 import 'package:sweptie/services/database_service.dart';
@@ -20,8 +21,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _syncStatus = '';
   PhotoPermissionStatus? _permissionStatus;
   String _selectedCategory = 'all';
-  // Lets the user manually hide the limited-access banner if the OS permission
-  // API keeps returning "limited" even after they've granted full access.
   bool _limitedBannerDismissed = false;
 
   @override
@@ -40,28 +39,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When returning from the system Settings page re-check permission only —
-    // no need to re-scan the whole gallery just to update the banner.
     if (state == AppLifecycleState.resumed) {
       _checkPermissionOnly();
     }
   }
 
-  /// Re-checks the current permission state and updates the banner without
-  /// triggering a full gallery sync.
   Future<void> _checkPermissionOnly() async {
     final status = await GalleryService.instance.requestPermission();
     if (!mounted) return;
     setState(() {
       _permissionStatus = status;
-      // If the OS now correctly reports full access, reset the dismissed flag
-      // so the banner won't reappear if they later revoke and re-grant.
       if (status == PhotoPermissionStatus.authorized) {
         _limitedBannerDismissed = false;
       }
     });
-    // If they just upgraded from limited → authorized, sync to pick up newly
-    // accessible photos.
     if (status == PhotoPermissionStatus.authorized && _items.isEmpty) {
       _syncFromGallery();
     }
@@ -130,30 +121,73 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sweptie', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: false,
-        actions: [
-          if (_isSyncing)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(_syncStatus, style: const TextStyle(fontSize: 12)),
-                ],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF0D1F33), const Color(0xFF1565C0)]
+                  : [const Color(0xFF0D47A1), const Color(0xFF1E88E5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Sweptie',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Colors.white,
               ),
             ),
-          if (!_isSyncing)
+            Text(
+              _isSyncing ? _syncStatus : '${_items.length} screenshots',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
+          ],
+        ),
+        actions: [
+          // Dark / light mode toggle
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: Colors.white,
+            ),
+            tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+            onPressed: () {
+              themeModeNotifier.value =
+                  isDark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
+          if (_isSyncing)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            )
+          else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
               tooltip: 'Sync gallery',
               onPressed: () { _loadFromDb(); _syncFromGallery(); },
             ),
@@ -189,13 +223,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           await _syncFromGallery();
                         },
                         child: GridView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
-                            childAspectRatio: 0.75,
+                            childAspectRatio: 0.72,
                           ),
                           itemCount: _filtered.length,
                           itemBuilder: (context, index) {
@@ -236,22 +270,24 @@ class _PermissionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      color: Colors.red.shade50,
+      color: cs.errorContainer,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.no_photography_outlined, color: Colors.red),
+          Icon(Icons.no_photography_outlined, color: cs.onErrorContainer),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'Photo access denied. Sweptie cannot scan your screenshots automatically.',
-              style: TextStyle(fontSize: 13, color: Colors.black87),
+              style: TextStyle(fontSize: 13, color: cs.onErrorContainer),
             ),
           ),
           TextButton(
             onPressed: onOpenSettings,
+            style: TextButton.styleFrom(foregroundColor: cs.onErrorContainer),
             child: const Text('Open Settings'),
           ),
         ],
@@ -267,26 +303,28 @@ class _LimitedAccessBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      color: Colors.orange.shade50,
+      color: cs.tertiaryContainer,
       padding: const EdgeInsets.only(left: 16, top: 6, bottom: 6, right: 4),
       child: Row(
         children: [
-          const Icon(Icons.photo_library_outlined, color: Colors.orange),
+          Icon(Icons.photo_library_outlined, color: cs.onTertiaryContainer),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'Limited access — only selected photos visible. Grant full access to scan all screenshots.',
-              style: TextStyle(fontSize: 13, color: Colors.black87),
+              style: TextStyle(fontSize: 13, color: cs.onTertiaryContainer),
             ),
           ),
           TextButton(
             onPressed: onOpenSettings,
+            style: TextButton.styleFrom(foregroundColor: cs.onTertiaryContainer),
             child: const Text('Allow All'),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 18, color: Colors.orange),
+            icon: Icon(Icons.close_rounded, size: 18, color: cs.onTertiaryContainer),
             tooltip: 'Dismiss',
             onPressed: onDismiss,
           ),
@@ -306,14 +344,16 @@ class _CategoryFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final categories = ['all', ...ScreenshotCategory.all];
+
     return SizedBox(
-      height: 44,
+      height: 52,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, i) {
           final cat = categories[i];
           final isSelected = cat == selected;
@@ -324,13 +364,17 @@ class _CategoryFilterBar extends StatelessWidget {
                   : '${ScreenshotCategory.emoji(cat)} ${ScreenshotCategory.label(cat)}',
               style: TextStyle(
                 fontSize: 12,
-                color: isSelected ? Colors.white : null,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
               ),
             ),
             selected: isSelected,
             onSelected: (_) => onSelected(cat),
-            selectedColor: Theme.of(context).colorScheme.primary,
+            selectedColor: cs.primary,
+            backgroundColor: cs.surfaceContainerHighest,
             showCheckmark: false,
+            side: BorderSide.none,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
           );
         },
       ),
@@ -353,27 +397,39 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              permissionDenied
-                  ? Icons.no_photography_outlined
-                  : Icons.photo_library_outlined,
-              size: 72,
-              color: Colors.grey.shade300,
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withAlpha(80),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                permissionDenied
+                    ? Icons.no_photography_outlined
+                    : Icons.photo_library_outlined,
+                size: 56,
+                color: cs.primary,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               isSyncing
                   ? 'Scanning your screenshots…'
                   : permissionDenied
                       ? 'No gallery access'
                       : 'No screenshots yet',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -381,11 +437,11 @@ class _EmptyState extends StatelessWidget {
               permissionDenied
                   ? 'You can still add photos manually using the button below.'
                   : 'Pull down to refresh, or add images manually.',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+              style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             if (!isSyncing) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               FilledButton.icon(
                 onPressed: onAddManually,
                 icon: const Icon(Icons.add_photo_alternate_outlined),
