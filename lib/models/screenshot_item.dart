@@ -71,26 +71,26 @@ class ScreenshotItem {
 /// Category constants used throughout the app
 class ScreenshotCategory {
   static const receipt = 'receipt';
-  static const password = 'password';
+  static const qrcode = 'qrcode';
   static const code = 'code';
   static const contact = 'contact';
-  static const url = 'url';
+  static const notes = 'notes';
   static const unclassified = 'unclassified';
 
-  static const all = [receipt, password, code, contact, url, unclassified];
+  static const all = [receipt, qrcode, code, contact, notes, unclassified];
 
   static String label(String category) {
     switch (category) {
       case receipt:
         return 'Receipt';
-      case password:
-        return 'Password';
+      case qrcode:
+        return 'QR Code';
       case code:
         return 'Code';
       case contact:
         return 'Contact';
-      case url:
-        return 'URL';
+      case notes:
+        return 'Notes';
       default:
         return 'Other';
     }
@@ -100,16 +100,16 @@ class ScreenshotCategory {
     switch (category) {
       case receipt:
         return '🧾';
-      case password:
-        return '🔐';
+      case qrcode:
+        return '📷';
       case code:
         return '💻';
       case contact:
         return '📇';
-      case url:
-        return '🔗';
+      case notes:
+        return '📝';
       default:
-        return '📷';
+        return '🗂️';
     }
   }
 }

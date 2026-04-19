@@ -12,7 +12,7 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     _db = await openDatabase(
       join(dbPath, 'sweptie.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE screenshots (
@@ -32,6 +32,17 @@ class DatabaseService {
         await db.execute(
           'CREATE INDEX idx_is_kept ON screenshots(is_kept)',
         );
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Rename old category values to match new constants
+          await db.execute(
+            "UPDATE screenshots SET category = 'qrcode' WHERE category = 'password'",
+          );
+          await db.execute(
+            "UPDATE screenshots SET category = 'notes' WHERE category = 'url'",
+          );
+        }
       },
     );
   }

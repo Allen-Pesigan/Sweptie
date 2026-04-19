@@ -101,13 +101,13 @@ class ScreenshotCard extends StatelessWidget {
     switch (category) {
       case ScreenshotCategory.receipt:
         return Colors.green.shade700;
-      case ScreenshotCategory.password:
-        return Colors.red.shade700;
+      case ScreenshotCategory.qrcode:
+        return Colors.deepPurple;
       case ScreenshotCategory.code:
         return Colors.indigo;
       case ScreenshotCategory.contact:
         return Colors.teal;
-      case ScreenshotCategory.url:
+      case ScreenshotCategory.notes:
         return Colors.blue.shade700;
       default:
         return Colors.grey.shade600;

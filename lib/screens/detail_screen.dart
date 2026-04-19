@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:sweptie/models/screenshot_item.dart';
 import 'package:sweptie/services/database_service.dart';
 
@@ -30,26 +31,87 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   Future<void> _delete() async {
+    bool alsoDeleteFromGallery = false;
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete screenshot?'),
-        content: const Text(
-            'This will remove the record from Sweptie. The original file in your gallery is not affected.'),
-        actions: [
-          TextButton(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Delete screenshot?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('This will remove the record from Sweptie.'),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: alsoDeleteFromGallery,
+                onChanged: (v) =>
+                    setDialogState(() => alsoDeleteFromGallery = v ?? false),
+                title: const Text(
+                  'Also delete from gallery',
+                  style: TextStyle(fontSize: 14),
+                ),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          TextButton(
+              child: const Text('Cancel'),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
-        ],
+              child: const Text('Delete',
+                  style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
       ),
     );
-    if (confirm == true && mounted) {
-      await DatabaseService.instance.deleteScreenshot(_item.id);
-      if (mounted) Navigator.pop(context, _item.copyWith(isProcessed: false));
+
+    if (confirm != true || !mounted) return;
+
+    await DatabaseService.instance.deleteScreenshot(_item.id);
+
+    if (alsoDeleteFromGallery) {
+      // Manually-added files use the file path as assetId (starts with /).
+      // Gallery-synced items use the photo_manager numeric/UUID asset ID.
+      final isManualFile = _item.assetId.startsWith('/');
+
+      if (isManualFile) {
+        final file = File(_item.assetId);
+        if (await file.exists()) await file.delete();
+      } else {
+        try {
+          // On Android 10+ this shows a system confirmation dialog.
+          // Returns the list of IDs that were actually deleted.
+          final deleted =
+              await PhotoManager.editor.deleteWithIds([_item.assetId]);
+          if (mounted && deleted.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Gallery deletion was cancelled or denied by the system.'),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Could not delete from gallery.'),
+              ),
+            );
+          }
+        }
+      }
     }
+
+    if (mounted) Navigator.pop(context, _item.copyWith(isProcessed: false));
   }
 
   void _copyText() {

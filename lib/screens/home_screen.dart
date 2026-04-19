@@ -13,19 +13,58 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<ScreenshotItem> _items = [];
   bool _isLoading = false;
   bool _isSyncing = false;
   String _syncStatus = '';
   PhotoPermissionStatus? _permissionStatus;
   String _selectedCategory = 'all';
+  // Lets the user manually hide the limited-access banner if the OS permission
+  // API keeps returning "limited" even after they've granted full access.
+  bool _limitedBannerDismissed = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadFromDb();
     _syncFromGallery();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When returning from the system Settings page re-check permission only —
+    // no need to re-scan the whole gallery just to update the banner.
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionOnly();
+    }
+  }
+
+  /// Re-checks the current permission state and updates the banner without
+  /// triggering a full gallery sync.
+  Future<void> _checkPermissionOnly() async {
+    final status = await GalleryService.instance.requestPermission();
+    if (!mounted) return;
+    setState(() {
+      _permissionStatus = status;
+      // If the OS now correctly reports full access, reset the dismissed flag
+      // so the banner won't reappear if they later revoke and re-grant.
+      if (status == PhotoPermissionStatus.authorized) {
+        _limitedBannerDismissed = false;
+      }
+    });
+    // If they just upgraded from limited → authorized, sync to pick up newly
+    // accessible photos.
+    if (status == PhotoPermissionStatus.authorized && _items.isEmpty) {
+      _syncFromGallery();
+    }
   }
 
   Future<void> _loadFromDb() async {
@@ -125,8 +164,11 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           if (_permissionStatus == PhotoPermissionStatus.denied)
             _PermissionBanner(onOpenSettings: GalleryService.instance.openSettings),
-          if (_permissionStatus == PhotoPermissionStatus.limited)
-            _LimitedAccessBanner(onOpenSettings: GalleryService.instance.openSettings),
+          if (_permissionStatus == PhotoPermissionStatus.limited && !_limitedBannerDismissed)
+            _LimitedAccessBanner(
+              onOpenSettings: GalleryService.instance.openSettings,
+              onDismiss: () => setState(() => _limitedBannerDismissed = true),
+            ),
           _CategoryFilterBar(
             selected: _selectedCategory,
             onSelected: (cat) => setState(() => _selectedCategory = cat),
@@ -220,14 +262,15 @@ class _PermissionBanner extends StatelessWidget {
 
 class _LimitedAccessBanner extends StatelessWidget {
   final VoidCallback onOpenSettings;
-  const _LimitedAccessBanner({required this.onOpenSettings});
+  final VoidCallback onDismiss;
+  const _LimitedAccessBanner({required this.onOpenSettings, required this.onDismiss});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       color: Colors.orange.shade50,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.only(left: 16, top: 6, bottom: 6, right: 4),
       child: Row(
         children: [
           const Icon(Icons.photo_library_outlined, color: Colors.orange),
@@ -241,6 +284,11 @@ class _LimitedAccessBanner extends StatelessWidget {
           TextButton(
             onPressed: onOpenSettings,
             child: const Text('Allow All'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18, color: Colors.orange),
+            tooltip: 'Dismiss',
+            onPressed: onDismiss,
           ),
         ],
       ),
