@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sweptie/models/screenshot_item.dart';
 import 'package:sweptie/screens/detail_screen.dart';
+import 'package:sweptie/screens/duplicates_screen.dart';
 import 'package:sweptie/services/database_service.dart';
 
 class SuggestionsScreen extends StatefulWidget {
@@ -96,6 +97,14 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
             const Text('Suggestions', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.copy_all_rounded),
+            tooltip: 'Find Duplicates',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DuplicatesScreen()),
+            ),
+          ),
           if (_suggestions.isNotEmpty)
             TextButton(
               onPressed: _selectAll,
@@ -228,7 +237,7 @@ class _SuggestionTile extends StatelessWidget {
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.5),
+                    color: Colors.blue.withAlpha(128),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.check, color: Colors.white),

@@ -117,6 +117,28 @@ class DatabaseService {
     await _database.delete('screenshots', where: 'id = ?', whereArgs: [id]);
   }
 
+  // Returns groups of screenshots that share identical (non-empty) extracted text.
+  Future<List<List<ScreenshotItem>>> getDuplicateCandidates() async {
+    final rows = await _database.rawQuery('''
+      SELECT * FROM screenshots
+      WHERE extracted_text != ''
+        AND extracted_text IN (
+          SELECT extracted_text FROM screenshots
+          WHERE extracted_text != ''
+          GROUP BY extracted_text
+          HAVING COUNT(*) > 1
+        )
+      ORDER BY extracted_text, date_added ASC
+    ''');
+
+    final items = rows.map(ScreenshotItem.fromMap).toList();
+    final groups = <String, List<ScreenshotItem>>{};
+    for (final item in items) {
+      groups.putIfAbsent(item.extractedText, () => []).add(item);
+    }
+    return groups.values.toList();
+  }
+
   Future<Map<String, int>> getCategoryCounts() async {
     final rows = await _database.rawQuery(
       'SELECT category, COUNT(*) as count FROM screenshots GROUP BY category',

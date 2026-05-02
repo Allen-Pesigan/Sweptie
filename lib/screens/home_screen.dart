@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sweptie/main.dart' show themeModeNotifier;
+import 'package:sweptie/main.dart' show themeModeNotifier, userModelNotifier;
 import 'package:sweptie/models/screenshot_item.dart';
 import 'package:sweptie/screens/detail_screen.dart';
+import 'package:sweptie/services/auth_service.dart';
 import 'package:sweptie/services/database_service.dart';
 import 'package:sweptie/services/gallery_service.dart';
 import 'package:sweptie/widgets/screenshot_card.dart';
@@ -159,7 +160,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
         actions: [
-          // Dark / light mode toggle
           IconButton(
             icon: Icon(
               isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
@@ -169,6 +169,101 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onPressed: () {
               themeModeNotifier.value =
                   isDark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
+          ValueListenableBuilder(
+            valueListenable: userModelNotifier,
+            builder: (context, user, _) {
+              final initial = (user?.displayName.isNotEmpty == true)
+                  ? user!.displayName[0].toUpperCase()
+                  : '?';
+              final isPremium = user?.isPremium ?? false;
+              return PopupMenuButton<String>(
+                offset: const Offset(0, 48),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Colors.white24,
+                        child: Text(initial,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                      if (isPremium)
+                        Positioned(
+                          right: -4,
+                          bottom: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                                color: Colors.amber,
+                                shape: BoxShape.circle),
+                            child: const Icon(Icons.star_rounded,
+                                size: 10, color: Colors.white),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    enabled: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user?.displayName ?? '',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold)),
+                        Text(user?.email ?? '',
+                            style: const TextStyle(fontSize: 12)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isPremium
+                                ? Colors.amber.shade100
+                                : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isPremium ? '★ Premium' : 'Free plan',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isPremium
+                                  ? Colors.amber.shade800
+                                  : Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'signout',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.logout_rounded, size: 18),
+                        SizedBox(width: 10),
+                        Text('Sign Out'),
+                      ],
+                    ),
+                  ),
+                ],
+                onSelected: (value) async {
+                  if (value == 'signout') {
+                    await AuthService.instance.signOut();
+                  }
+                },
+              );
             },
           ),
           if (_isSyncing)

@@ -1,15 +1,29 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:sweptie/models/user_model.dart';
 import 'package:sweptie/screens/home_screen.dart';
+import 'package:sweptie/screens/login_screen.dart';
 import 'package:sweptie/screens/search_screen.dart';
 import 'package:sweptie/screens/suggestions_screen.dart';
+import 'package:sweptie/services/auth_service.dart';
 import 'package:sweptie/services/database_service.dart';
 
-// Exposed so any widget can toggle the theme without a state-management package.
 final themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+
+// Holds the current signed-in user's model so any screen can read isPremium.
+final userModelNotifier = ValueNotifier<UserModel?>(null);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   await DatabaseService.instance.init();
+
+  // Keep userModelNotifier in sync with auth state.
+  AuthService.instance.userModelStream().listen((model) {
+    userModelNotifier.value = model;
+  });
+
   runApp(const SweptieApp());
 }
 
@@ -39,8 +53,28 @@ class SweptieApp extends StatelessWidget {
             useMaterial3: true,
           ),
           themeMode: mode,
-          home: const _MainNavigator(),
+          home: const _AuthGate(),
         );
+      },
+    );
+  }
+}
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: AuthService.instance.authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.data == null) return const LoginScreen();
+        return const _MainNavigator();
       },
     );
   }
