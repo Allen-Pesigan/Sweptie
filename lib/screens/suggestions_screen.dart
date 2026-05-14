@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:sweptie/models/screenshot_item.dart';
 import 'package:sweptie/screens/detail_screen.dart';
 import 'package:sweptie/screens/duplicates_screen.dart';
@@ -53,29 +54,66 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
   Future<void> _deleteSelected() async {
     if (_selectedIds.isEmpty) return;
     final count = _selectedIds.length;
+    bool alsoDeleteFromGallery = false;
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete $count screenshot${count > 1 ? 's' : ''}?'),
-        content: const Text(
-            'Records will be removed from Sweptie. Original files in your gallery are not affected.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Delete $count screenshot${count > 1 ? 's' : ''}?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Selected screenshots will be removed from Sweptie.'),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: alsoDeleteFromGallery,
+                onChanged: (v) =>
+                    setDialogState(() => alsoDeleteFromGallery = v ?? false),
+                title: const Text('Also delete from gallery',
+                    style: TextStyle(fontSize: 14)),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
       ),
     );
 
     if (confirm != true || !mounted) return;
 
+    final selectedItems =
+        _suggestions.where((e) => _selectedIds.contains(e.id)).toList();
+
     for (final id in _selectedIds) {
       await DatabaseService.instance.deleteScreenshot(id);
+    }
+
+    if (alsoDeleteFromGallery) {
+      final galleryIds = selectedItems
+          .where((e) => !e.assetId.startsWith('/'))
+          .map((e) => e.assetId)
+          .toList();
+      if (galleryIds.isNotEmpty) {
+        await PhotoManager.editor.deleteWithIds(galleryIds);
+      }
+      for (final item in selectedItems.where((e) => e.assetId.startsWith('/'))) {
+        final file = File(item.assetId);
+        if (await file.exists()) await file.delete();
+      }
     }
 
     if (mounted) {
@@ -97,9 +135,9 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
             const Text('Suggestions', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.copy_all_rounded),
-            tooltip: 'Find Duplicates',
+          TextButton.icon(
+            icon: const Icon(Icons.difference_rounded, size: 18),
+            label: const Text('Duplicates'),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const DuplicatesScreen()),

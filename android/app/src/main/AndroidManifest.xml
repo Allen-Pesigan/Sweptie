@@ -1,8 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Photo access — Android 13 (API 33) -->
+    <!-- Photo access — Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Partial / limited photo access — Android 14 (API 34+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <!-- Fallback for Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />

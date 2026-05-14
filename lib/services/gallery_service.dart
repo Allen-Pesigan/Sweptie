@@ -16,8 +16,9 @@ class GalleryService {
   /// "select photos" or iOS 14+ limited library), [denied] otherwise.
   Future<PhotoPermissionStatus> requestPermission() async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
-    if (ps == PermissionState.authorized) return PhotoPermissionStatus.authorized;
-    if (ps == PermissionState.limited) return PhotoPermissionStatus.limited;
+    if (ps == PermissionState.authorized || ps == PermissionState.limited) {
+      return PhotoPermissionStatus.authorized;
+    }
     return PhotoPermissionStatus.denied;
   }
 

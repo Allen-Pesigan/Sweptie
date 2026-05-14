@@ -22,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _syncStatus = '';
   PhotoPermissionStatus? _permissionStatus;
   String _selectedCategory = 'all';
-  bool _limitedBannerDismissed = false;
 
   @override
   void initState() {
@@ -48,12 +47,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _checkPermissionOnly() async {
     final status = await GalleryService.instance.requestPermission();
     if (!mounted) return;
-    setState(() {
-      _permissionStatus = status;
-      if (status == PhotoPermissionStatus.authorized) {
-        _limitedBannerDismissed = false;
-      }
-    });
+    setState(() => _permissionStatus = status);
     if (status == PhotoPermissionStatus.authorized && _items.isEmpty) {
       _syncFromGallery();
     }
@@ -293,11 +287,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           if (_permissionStatus == PhotoPermissionStatus.denied)
             _PermissionBanner(onOpenSettings: GalleryService.instance.openSettings),
-          if (_permissionStatus == PhotoPermissionStatus.limited && !_limitedBannerDismissed)
-            _LimitedAccessBanner(
-              onOpenSettings: GalleryService.instance.openSettings,
-              onDismiss: () => setState(() => _limitedBannerDismissed = true),
-            ),
           _CategoryFilterBar(
             selected: _selectedCategory,
             onSelected: (cat) => setState(() => _selectedCategory = cat),
