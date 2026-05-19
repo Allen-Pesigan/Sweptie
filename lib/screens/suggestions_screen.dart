@@ -129,15 +129,31 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Suggestions', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF0D1F33), const Color(0xFF1565C0)]
+                  : [const Color(0xFF0D47A1), const Color(0xFF1E88E5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: const Text('Suggestions',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: false,
         actions: [
           TextButton.icon(
-            icon: const Icon(Icons.difference_rounded, size: 18),
-            label: const Text('Duplicates'),
+            icon: const Icon(Icons.difference_rounded, size: 18, color: Colors.white),
+            label: const Text('Duplicates', style: TextStyle(color: Colors.white)),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const DuplicatesScreen()),
@@ -150,6 +166,7 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
                 _selectedIds.length == _suggestions.length
                     ? 'Deselect All'
                     : 'Select All',
+                style: const TextStyle(color: Colors.white),
               ),
             ),
         ],

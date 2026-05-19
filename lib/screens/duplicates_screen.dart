@@ -237,6 +237,25 @@ class _DuplicateGroup extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
+        leading: SizedBox(
+          width: 52,
+          height: 52,
+          child: Stack(
+            children: [
+              if (group.length > 1)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: _TileThumb(item: group[1]),
+                ),
+              Positioned(
+                left: 0,
+                top: 0,
+                child: _TileThumb(item: group.first),
+              ),
+            ],
+          ),
+        ),
         title: Text(
           '${group.length} duplicates',
           style: const TextStyle(fontWeight: FontWeight.w600),
@@ -340,4 +359,32 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TileThumb extends StatelessWidget {
+  final ScreenshotItem item;
+  const _TileThumb({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: item.localPath != null
+          ? Image.file(
+              File(item.localPath!),
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _placeholder(),
+            )
+          : _placeholder(),
+    );
+  }
+
+  Widget _placeholder() => Container(
+        width: 36,
+        height: 36,
+        color: Colors.grey.shade200,
+        child: const Icon(Icons.image, color: Colors.grey, size: 16),
+      );
 }

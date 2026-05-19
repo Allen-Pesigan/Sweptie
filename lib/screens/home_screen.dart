@@ -290,6 +290,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _CategoryFilterBar(
             selected: _selectedCategory,
             onSelected: (cat) => setState(() => _selectedCategory = cat),
+            counts: {
+              'all': _items.length,
+              for (final cat in ScreenshotCategory.all)
+                cat: _items.where((e) => e.category == cat).length,
+            },
           ),
           Expanded(
             child: _isLoading
@@ -423,8 +428,13 @@ class _LimitedAccessBanner extends StatelessWidget {
 class _CategoryFilterBar extends StatelessWidget {
   final String selected;
   final void Function(String) onSelected;
+  final Map<String, int> counts;
 
-  const _CategoryFilterBar({required this.selected, required this.onSelected});
+  const _CategoryFilterBar({
+    required this.selected,
+    required this.onSelected,
+    required this.counts,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -441,11 +451,13 @@ class _CategoryFilterBar extends StatelessWidget {
         itemBuilder: (context, i) {
           final cat = categories[i];
           final isSelected = cat == selected;
+          final count = counts[cat] ?? 0;
+          final label = cat == 'all'
+              ? 'All $count'
+              : '${ScreenshotCategory.emoji(cat)} ${ScreenshotCategory.label(cat)} $count';
           return FilterChip(
             label: Text(
-              cat == 'all'
-                  ? 'All'
-                  : '${ScreenshotCategory.emoji(cat)} ${ScreenshotCategory.label(cat)}',
+              label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -457,7 +469,9 @@ class _CategoryFilterBar extends StatelessWidget {
             selectedColor: cs.primary,
             backgroundColor: cs.surfaceContainerHighest,
             showCheckmark: false,
-            side: BorderSide.none,
+            side: isSelected
+                ? BorderSide.none
+                : BorderSide(color: cs.outlineVariant, width: 0.8),
             padding: const EdgeInsets.symmetric(horizontal: 4),
           );
         },

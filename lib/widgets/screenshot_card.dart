@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:sweptie/models/screenshot_item.dart';
 
 class ScreenshotCard extends StatelessWidget {
@@ -25,7 +26,6 @@ class ScreenshotCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             _buildImage(),
-            // 3-stop gradient for better text legibility over any image
             Positioned(
               left: 0,
               right: 0,
@@ -43,29 +43,48 @@ class ScreenshotCard extends StatelessWidget {
                     stops: [0.0, 0.45, 1.0],
                   ),
                 ),
-                padding: const EdgeInsets.fromLTRB(8, 28, 8, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(child: _buildCategoryChip()),
-                    if (item.isKept)
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.amber,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.bookmark_rounded,
-                          color: Colors.white,
-                          size: 13,
-                        ),
+                    Text(
+                      DateFormat('MMM d, yyyy').format(item.dateAdded),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [Flexible(child: _buildCategoryChip())],
+                    ),
                   ],
                 ),
               ),
             ),
+            if (item.isKept)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.bookmark_rounded,
+                    color: Colors.white,
+                    size: 15,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
