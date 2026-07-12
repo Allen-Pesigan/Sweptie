@@ -300,7 +300,7 @@ flutter test --coverage
 
 ## Support
 
-For issues or feature requests, contact: bulbarsar03@gmail.com
+For issues or feature requests, contact: allenpesigan@gmail.com
 
 ## License
 
