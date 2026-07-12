@@ -8,7 +8,7 @@ Sweptie solves the screenshot clutter problem by:
 - **Automatically categorizing** screenshots (receipts, QR codes, documents, contacts, notes) using Google ML Kit OCR
 - **Detecting duplicates** and suggesting deletion candidates to save device storage
 - **Providing smart retrieval** with organized folders and searchable content
-- **Respecting privacy** with local-first processing and Firebase cloud sync
+- **Respecting privacy** with local-only processing
 
 ## Features
 
